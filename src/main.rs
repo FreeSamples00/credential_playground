@@ -28,19 +28,18 @@ const ROOT: &str = "root";
 const COST: u8 = 10;
 
 /// help message of commands for any normal user
-const USER_HELP_MSG: &str = "
-help, ?            Display this helpful message
+const USER_HELP_MSG: &str = "help, ?            Display this helpful message
 logout             logout
 switchuser <user>  logout, login as <user>
 chpass             change your password
 chname             change your username
 whoami             print out username
 users              list users
-";
+clear              clear screen
+exit               exit program";
 
 /// help message of commands for the root user
-const ROOT_HELP_MSG: &str = "
-help, ?            display this helpful message
+const ROOT_HELP_MSG: &str = "help, ?            display this helpful message
 logout             logout
 switchuser <user>  logout, login as <user>
 chpass <user>      change a user's password
@@ -48,16 +47,17 @@ chname <user>      change a user's username
 reset              delete all users and clear stored credentials
 whoami             print out username
 users              list users
-";
+clear              clear screen
+exit               exit program";
 
 /// help message of commands for a logged out user
-const NULL_HELP_MSG: &str = "
-help, ?            display this helpful message
+const NULL_HELP_MSG: &str = "help, ?            display this helpful message
 login <user>       login to an account
-rmuser             remove a user
-makeuser           make a user
-users              list users
-";
+makeuser           create root if it does not exist
+whoami             print username
+users              list user
+clear              clear screen
+exit               exit program";
 
 // TODO: send to leyton
 
@@ -170,12 +170,12 @@ impl UserCredentials {
 ///     * `B` - the `cost` used in the calculations
 ///     * `C` - the base64 encoded `salt` used in the hash calculation
 ///     * `D` - the base64 encoding of the resulting password hash
-fn hash_password(password: String, salt: Vec<u8>, cost: u8) -> String {
+fn hash_password(password: &str, salt: Vec<u8>, cost: u8) -> String {
     // max password length: 72 bytes (UTF-8 encoded)
     //  if less than 72, repeat password and truncate at 72 bytes
 
     // from these 72 bytes create 18 32-bit 'subkeys'
-    return password;
+    return password.into();
     // TODO: implement bcrypt here
 }
 
@@ -201,15 +201,15 @@ fn get_salt(num_bytes: Option<usize>) -> Vec<u8> {
 
 /// function that securly gets a password input from the user
 /// # Arguments
-/// * `confirm` - bool, if true user is prompted to confirm password
+/// * `prompt` - text to prompt user with for password
+/// * `confirm` - if true user is prompted to confirm password
 /// # Return
 /// * password entered by user
-fn password_input(confirm: bool) -> String {
+fn password_input(prompt: &str, confirm: bool) -> String {
     if confirm {
         loop {
-            let inp1: String = prompt_password("Enter password: ").expect("read_password failed");
-            let inp2: String =
-                prompt_password("Re-enter password: ").expect("read_password failed");
+            let inp1: String = prompt_password(prompt).expect("read_password failed");
+            let inp2: String = prompt_password("Confirm password: ").expect("read_password failed");
             if inp1 == inp2 {
                 return inp1;
             } else {
@@ -217,7 +217,7 @@ fn password_input(confirm: bool) -> String {
             }
         }
     } else {
-        prompt_password("Enter password: ").expect("read_password failed")
+        prompt_password(prompt).expect("read_password failed")
     }
 }
 
@@ -243,7 +243,8 @@ fn inline_input(prompt: &str) -> String {
 /// * `password` - String of user's password (raw)
 /// # Return
 /// * whether or not user is authenticated
-fn authenticate(database: &UserCredentials, username: &String, password: &String) -> bool {
+fn authenticate(database: &UserCredentials, username: &str, password: &str) -> bool {
+    // TODO: insecure auth for testing, remove
     if !database.contains(username) {
         return false;
     }
@@ -284,7 +285,7 @@ fn authenticate(database: &UserCredentials, username: &String, password: &String
     };
 }
 
-// TODO: finish commands
+// TODO: test all commands
 
 /// This is a pseudo-shell to simulate logins and credential management
 fn main() {
@@ -293,14 +294,13 @@ fn main() {
     let mut user: String = NULLUSER.into();
 
     while !exit_flag {
+        let prompt;
         if user == NULLUSER {
-            print!("$ ");
+            prompt = "$ ".to_string();
         } else {
-            print!("{} $ ", user);
+            prompt = format!("{} $ ", &user);
         }
-        io::stdout().flush().expect("Failed to flush");
-
-        let argv: Vec<String> = inline_input("").split(' ').map(String::from).collect();
+        let argv: Vec<String> = inline_input(&prompt).split(' ').map(String::from).collect();
         let argc: i8 = argv.len() as i8;
 
         match argv[0].trim() {
@@ -317,39 +317,98 @@ fn main() {
                 }
             }
             "reset" => {
-                todo!("implement reset");
+                if argc != 1 {
+                    println!("Invalid arguments for '{}'", argv[0]);
+                    continue;
+                }
+                if user != ROOT {
+                    println!("Only root can reset credentials");
+                    continue;
+                }
+                if authenticate(&db, ROOT, &password_input("Root password: ", false)) {
+                    if inline_input("Are you sure you wish to delete all user information? [Y/n]: ")
+                        .to_lowercase()
+                        != "y"
+                    {
+                        continue;
+                    }
+                    for username in db.list_users() {
+                        db.remove(&username);
+                    }
+                    user = NULLUSER.into();
+                    println!("All user credentials deleted");
+                } else {
+                    println!("Failed to authenticate as root");
+                }
             }
             "rmuser" => {
-                // TODO: root vs user behavior
-                todo!("implement rmuser");
+                if user == ROOT {
+                    let username;
+                    if argc == 2 {
+                        username = argv[1].clone();
+                    } else if argc == 1 {
+                        username = inline_input("Username: ");
+                    } else {
+                        println!("Invalid arguments for '{}'", argv[0]);
+                        continue;
+                    }
+                    if authenticate(&db, ROOT, &password_input("Root password: ", false)) {
+                        if username == ROOT {
+                            println!("Can't delete root");
+                            continue;
+                        }
+                        db.remove(&username);
+                        println!("User '{}' deleted", username);
+                    } else {
+                        println!("Failed to authenticate as root");
+                    }
+                } else {
+                    println!("Only root can delete user accounts");
+                }
             }
             "makeuser" => {
-                // TODO: implement behavior for root, unable to use if user
                 let username;
-                if !db.contains(ROOT) {
-                    username = ROOT.to_string();
-                    println!("Creating root");
-                } else if argc == 1 {
-                    username = inline_input("Username: ");
-                } else if argc == 2 {
-                    username = argv[1].clone();
+                if user == NULLUSER {
+                    if argc != 1 && argv[1] != ROOT {
+                        println!("Invalid arguments for '{}'", argv[0]);
+                        continue;
+                    }
+                    if !db.contains(ROOT) {
+                        username = ROOT.to_string();
+                        println!("Creating root");
+                    } else {
+                        println!("Only root can create user accounts");
+                        continue;
+                    }
+                } else if user == ROOT {
+                    if argc == 2 {
+                        username = argv[1].clone();
+                    } else if argc == 1 {
+                        username = inline_input("Username: ");
+                    } else {
+                        println!("Invalid arguments for '{}'", argv[0]);
+                        continue;
+                    }
                 } else {
-                    println!("Invalid arguments for 'makeuser'");
-                    break;
+                    println!("Only root can create user accounts");
+                    continue;
                 }
+
                 if db.contains(&username) {
                     println!("User '{}' already exists", username);
-                    break;
+                    continue;
                 }
-                let password = password_input(true);
-                db.set(&username, &hash_password(password, get_salt(None), COST));
-                user = username.clone(); // TODO: do not login automatically
-                println!("Created user '{}' and logged in", username);
+                let password = password_input("Password: ", true);
+                db.set(&username, &hash_password(&password, get_salt(None), COST));
+                if username == ROOT {
+                    user = ROOT.to_string();
+                }
+                println!("Created user '{}'", username);
             }
             "login" => {
                 if user != NULLUSER {
-                    println!("Already logged in");
-                    break;
+                    println!("Already logged in as {}", user);
+                    continue;
                 }
                 let username;
                 if argc == 1 {
@@ -357,14 +416,14 @@ fn main() {
                 } else if argc == 2 {
                     username = argv[1].clone();
                 } else {
-                    println!("Invalid arguments for 'login'");
-                    break;
+                    println!("Invalid arguments for '{}'", argv[0]);
+                    continue;
                 }
-                if authenticate(&db, &username, &password_input(false)) {
+                if authenticate(&db, &username, &password_input("Password: ", false)) {
                     user = username.clone();
                     println!("Logged in as {}", username);
                 } else {
-                    println!("Login failed");
+                    println!("Failed to authenticate as {}", username);
                 }
             }
             "logout" => {
@@ -376,15 +435,130 @@ fn main() {
                 }
             }
             "switchuser" => {
-                todo!("implement switchuser");
+                let username;
+                if argc == 2 {
+                    username = argv[1].clone();
+                } else if argc == 1 {
+                    username = inline_input("Username: ");
+                } else {
+                    println!("Invalid arguments for '{}'", argv[0]);
+                    continue;
+                }
+                if authenticate(&db, &username, &password_input("Password: ", false)) {
+                    println!("Logged of of {}, logged in as {}", user, username);
+                    user = username.clone();
+                } else {
+                    println!("Failed to authenticate as {}", username);
+                }
             }
             "chpass" => {
-                //TODO: different behavior for root
-                todo!("implement chpass");
+                let username;
+                if user == ROOT {
+                    if argc == 2 {
+                        username = argv[1].clone();
+                    } else if argc == 1 {
+                        username = user.clone();
+                    } else {
+                        println!("Invalid arguments for '{}'", argv[0]);
+                        continue;
+                    }
+                    if authenticate(&db, &username, &password_input("Root password: ", false)) {
+                        db.set(
+                            &username,
+                            &hash_password(
+                                &password_input("New password: ", true),
+                                get_salt(None),
+                                COST,
+                            ),
+                        );
+                        println!("Password changed for {}", username);
+                    } else {
+                        println!("Failed to authenticate as root");
+                        continue;
+                    }
+                } else if user != NULLUSER {
+                    if argc != 1 {
+                        println!("Invalid arguments for '{}'", argv[0]);
+                        continue;
+                    }
+                    username = user.clone();
+                    if authenticate(&db, &username, &password_input("Current password: ", false)) {
+                        db.set(
+                            &username,
+                            &hash_password(
+                                &password_input("New password: ", true),
+                                get_salt(None),
+                                COST,
+                            ),
+                        );
+                        println!("Password changed for {}", username);
+                    } else {
+                        println!("Failed to authenticate as {}", username);
+                    }
+                } else {
+                    println!("Must be logged in to change password");
+                }
             }
             "chname" => {
-                // TODO: different behavior for root
-                todo!("implement chname");
+                let username;
+                if user == NULLUSER {
+                    println!("Must be logged in to change a username");
+                    continue;
+                } else if user != ROOT {
+                    if argc != 1 {
+                        println!("Invalid arguments for '{}'", argv[0]);
+                        continue;
+                    }
+                    username = user.clone();
+                    if authenticate(&db, &username, &password_input("Password: ", false)) {
+                        let new_username = inline_input("New username: ");
+                        if new_username == ROOT {
+                            println!("Cannot change username to root");
+                            continue;
+                        }
+                        if db.contains(&new_username) {
+                            println!("Account '{}' already exists", new_username);
+                            continue;
+                        }
+                        let hashword = db.get(&username).unwrap().clone();
+                        db.remove(&username);
+                        db.set(&new_username, &hashword);
+                        user = new_username.clone();
+                        println!("Changed {} to {}", username, new_username);
+                    } else {
+                        println!("Failed to authenticate as {}", username);
+                    }
+                } else {
+                    if argc == 2 {
+                        username = argv[1].clone();
+                    } else if argc == 1 {
+                        username = inline_input("Username: ");
+                    } else {
+                        println!("Invalid arguments for '{}'", argv[0]);
+                        continue;
+                    }
+                    if username == ROOT {
+                        println!("Cannot change username of root");
+                        continue;
+                    }
+                    if authenticate(&db, ROOT, &password_input("Root password: ", false)) {
+                        let new_username = inline_input("New username: ");
+                        if new_username == ROOT {
+                            println!("Cannot change username to root");
+                            continue;
+                        }
+                        if db.contains(&new_username) {
+                            println!("Account '{}' already exists", new_username);
+                            continue;
+                        }
+                        let hashword = db.get(&username).unwrap().clone();
+                        db.remove(&username);
+                        db.set(&new_username, &hashword);
+                        println!("Changed {} to {}", username, new_username);
+                    } else {
+                        println!("Failed to authenticate as root");
+                    }
+                }
             }
             "whoami" => {
                 if user == NULLUSER {
@@ -392,6 +566,14 @@ fn main() {
                 } else {
                     println!("{}", user);
                 }
+            }
+            "users" => {
+                for username in db.list_users() {
+                    println!("{}", username);
+                }
+            }
+            "clear" => {
+                print!("\x1bc"); // ANSI escape code to clear terminal screen
             }
             _ => {
                 if argv[0] != "" {
