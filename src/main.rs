@@ -1,18 +1,36 @@
+// src/main.rs
+//! This program simulates a shell with account management tools:
+//! * makeuser - create a user
+//! * login - log in to a user account
+//! * logout - log out of a user account
+//! * switchuser - switch to another user account
+//! * whoami - print current account name
+//! * users - print all registered users
+//! * chpass - change account password
+//! * chname - change account name
+//! * reset - delete all accounts (including root)
+//! * clear - clear terminal screen
+//! * exit - exit pseudo-shell
+
+// ==================== IMPORTS ====================
+
 mod auth_utils;
 use auth_utils::*;
 use std::io::{self, Write};
 
+// ==================== CONSTANTS ====================
+
 /// path to file where user data is stored
-const STORAGE_PATH: &str = "./userdata.csv";
+const STORAGE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/userdata.csv");
 
 /// predefined nulluser name
 const NULLUSER: &str = "";
 
-// predefined root user name
+/// predefined root user name
 const ROOT: &str = "root";
 
 /// help message of commands for any normal user
-const USER_HELP_MSG: &str = "help, ?            Display this helpful message
+const USER_HELP_MSG: &str = "help, ?            display this helpful message
 logout             logout
 switchuser <user>  logout, login as <user>
 chpass             change your password
@@ -43,6 +61,8 @@ users              list user
 clear              clear screen
 exit               exit program";
 
+// ==================== FUNCTIONS ====================
+
 /// function to get inline input from the user
 /// # Arguments
 /// * `prompt` - &str with which to prompt the user for input
@@ -62,8 +82,14 @@ fn inline_input(prompt: &str) -> String {
 
 // TODO: test all commands
 
+// TODO: implement sudo?
+
+// ==================== MAINLOOP ====================
+
 /// This is a pseudo-shell to simulate logins and credential management
 fn main() {
+    println!("===== ACCOUNT MANAGEMENT SIM =====");
+
     let mut db: UserCredentials = UserCredentials::new(STORAGE_PATH.into());
     let mut exit_flag: bool = false;
     let mut user: String = NULLUSER.into();
