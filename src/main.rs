@@ -123,7 +123,10 @@ static MKUSER: Command = Command {
 
 // ==== USERS ====
 fn f_users(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
+    for username in env.database.list_users() {
+        println!("{}", username);
+    }
+    0
 }
 
 static USERS: Command = Command {
@@ -136,7 +139,8 @@ static USERS: Command = Command {
 
 // ==== CLEAR ====
 fn f_clear(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
+    print!("\x1bc"); // ANSI escape code to clear terminal screen
+    0
 }
 
 static CLEAR: Command = Command {
