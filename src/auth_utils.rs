@@ -84,10 +84,10 @@ impl UserCredentials {
         let data: File = match File::open(filepath) {
             Ok(file) => file,
             Err(e) => {
-                eprintln!(
-                    "\x1b[91mUnable to read '{}', continuing with blank database. Error: {}\x1b[0m",
-                    filepath, e
-                );
+                // eprintln!(
+                //     "\x1b[91mUnable to read '{}', continuing with blank database. Error: {}\x1b[0m",
+                //     filepath, e
+                // );
                 return ret_val;
             }
         };
