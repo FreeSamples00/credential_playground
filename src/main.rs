@@ -523,9 +523,20 @@ fn main() {
         ],
     };
 
-    // TODO: if no root, prompt for creation
-
     loop {
+        if !env.database.contains(ROOT) {
+            println!("no root account found, creating one.");
+            env.database.set(
+                &ROOT,
+                &&hash_password(
+                    &password_input("root password: ", true),
+                    &get_salt(None),
+                    DEF_HASH_COST,
+                ),
+            );
+            println!("root created");
+        }
+
         let prompt = match env.user.as_str() {
             NULLUSER => "$ ".to_string(),
             _ => format!("{} $ ", &env.user),
