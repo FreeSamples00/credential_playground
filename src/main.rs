@@ -21,7 +21,7 @@ use std::io::{self, Write};
 // ==================== CONSTANTS ====================
 
 /// path to file where user data is stored
-const STORAGE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/userdata.csv");
+const STORAGE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/passwd");
 
 /// predefined nulluser name
 const NULLUSER: &str = "";
@@ -46,6 +46,8 @@ logout             logout
 switchuser <user>  logout, login as <user>
 chpass <user>      change a user's password
 chname <user>      change a user's username
+mkuser             create a user account
+rmuser             delete a user account
 reset              delete all users and clear stored credentials
 whoami             print out username
 users              list users
@@ -55,7 +57,7 @@ exit               exit program";
 /// help message of commands for a logged out user
 const NULL_HELP_MSG: &str = "help, ?            display this helpful message
 login <user>       login to an account
-makeuser           create root if it does not exist
+mkuser             create root if it does not exist
 whoami             print username
 users              list user
 clear              clear screen
@@ -77,12 +79,6 @@ fn inline_input(prompt: &str) -> String {
         .expect("stdin.read_line() failed");
     input_buffer.trim().into()
 }
-
-// TODO: send to leyton when done
-
-// TODO: test all commands
-
-// TODO: implement sudo?
 
 // ==================== MAINLOOP ====================
 
@@ -167,7 +163,7 @@ fn main() {
                     println!("Only root can delete user accounts");
                 }
             }
-            "makeuser" => {
+            "mkuser" => {
                 let username;
                 if user == NULLUSER {
                     if argc != 1 && argv[1] != ROOT {
@@ -202,7 +198,7 @@ fn main() {
                 let password = password_input("Password: ", true);
                 db.set(
                     &username,
-                    &hash_password(&password, get_salt(None), DEF_HASH_COST),
+                    &hash_password(&password, &get_salt(None), DEF_HASH_COST),
                 );
                 if username == ROOT {
                     user = ROOT.to_string();
@@ -271,7 +267,7 @@ fn main() {
                             &username,
                             &hash_password(
                                 &password_input("New password: ", true),
-                                get_salt(None),
+                                &get_salt(None),
                                 DEF_HASH_COST,
                             ),
                         );
@@ -291,7 +287,7 @@ fn main() {
                             &username,
                             &hash_password(
                                 &password_input("New password: ", true),
-                                get_salt(None),
+                                &get_salt(None),
                                 DEF_HASH_COST,
                             ),
                         );
