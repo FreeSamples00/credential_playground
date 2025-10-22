@@ -178,10 +178,66 @@ static CLEAR: Command = Command {
 // ==== CHNAME ====
 #[allow(unused_variables)]
 fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
-    // TODO:
-    // if perms >= sudo -> allow for changing another name
-    // else -> change self name (w/ pass)
+    if env.permissions >= P_ROOT {
+        if argc != 3 {
+            println!("invalid arguments for {} as root", argv[0]);
+            1
+        } else {
+            if authenticate(
+                &env.database,
+                ROOT,
+                &password_input("root password: ", false),
+            ) {
+                let old_name = &argv[1];
+                let new_name = &argv[2];
+                if env.database.contains(new_name) {
+                    println!("account {} already exists", new_name);
+                    return 1;
+                }
+                if !env.database.contains(old_name) {
+                    println!("account {} not found", old_name);
+                    return 1;
+                }
+                let hashword = env.database.get(old_name).unwrap().clone();
+                env.database.remove(old_name);
+                env.database.set(new_name, &hashword);
+                0
+            } else {
+                println!("could not authenticate as root");
+                1
+            }
+        }
+    } else {
+        if argc != 2 {
+            println!("invalid arguments for {}", argv[0]);
+            1
+        } else {
+            if authenticate(
+                &env.database,
+                &env.user,
+                &password_input("password: ", false),
+            ) {
+                let old_name = &env.user;
+                let new_name = &argv[1];
+                if env.database.contains(new_name) {
+                    println!("account {} already exists", new_name);
+                    return 1;
+                }
+                if !env.database.contains(old_name) {
+                    println!("account {} not found", old_name);
+                    return 1;
+                }
+                let hashword = env.database.get(old_name).unwrap().clone();
+                env.database.remove(old_name);
+                env.database.set(new_name, &hashword);
+                env.user = new_name.clone();
+                0
+            } else {
+                println!("failed authentication");
+                1
+            }
+        }
+    }
 }
 
 static CHNAME: Command = Command {
@@ -195,10 +251,55 @@ static CHNAME: Command = Command {
 // ==== CHPASS ====
 #[allow(unused_variables)]
 fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
-    // TODO:
-    // if root -> can change another account
-    // else -> own account
+    if argc == 1 {
+        if authenticate(
+            &env.database,
+            &env.user,
+            &password_input("current password: ", false),
+        ) {
+            env.database.set(
+                &env.user,
+                &hash_password(
+                    &password_input("new password: ", true),
+                    &get_salt(None),
+                    DEF_HASH_COST,
+                ),
+            );
+            println!("changed password for {}", env.user);
+            0
+        } else {
+            println!("failed to authenticate");
+            1
+        }
+    } else if argc == 2 && env.permissions >= P_ROOT {
+        if authenticate(
+            &env.database,
+            ROOT,
+            &password_input("root password: ", false),
+        ) {
+            let target_user = &argv[1];
+            if !env.database.contains(&target_user) {
+                println!("account {} not found", target_user);
+                return 1;
+            }
+            env.database.set(
+                target_user,
+                &hash_password(
+                    &password_input("new account password: ", true),
+                    &get_salt(None),
+                    DEF_HASH_COST,
+                ),
+            );
+            println!("changed {}'s password", target_user);
+            0
+        } else {
+            println!("failed to authenticate as root");
+            1
+        }
+    } else {
+        println!("invalid arguments for {}", argv[0]);
+        1
+    }
 }
 
 static CHPASS: Command = Command {
@@ -421,13 +522,13 @@ fn main() {
 
         if let Some(cmd) = env.commands.iter().copied().find(|c| c.name == argv[0]) {
             if env.permissions < cmd.permissions {
-                eprintln!("permission denied: {}.", cmd.name);
+                println!("permission denied: {}.", cmd.name);
                 continue;
             }
 
             let ret_code = (cmd.handler)(&mut env, argc, &argv);
         } else {
-            eprintln!("unknown command: {}. try 'help'.", argv[0])
+            println!("unknown command: {}. try 'help'.", argv[0])
         }
     }
 }
