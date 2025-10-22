@@ -42,16 +42,14 @@ fn inline_input(prompt: &str) -> String {
 
 // ==================== STRUCTURES ====================
 
-#[derive(Debug)]
 struct Command {
     name: &'static str,
     usage: &'static str,
     description: &'static str,
     permissions: u8,
-    handler: fn(u8, &[String]) -> i8,
+    handler: fn(&mut Environment, u8, &[String]) -> i8,
 }
 
-#[derive(Debug)]
 struct Environment {
     user: String,
     permissions: u8,
@@ -62,8 +60,26 @@ struct Environment {
 // ==================== COMMANDS ====================
 
 // ==== HELP ====
-fn f_help(argc: u8, argv: &[String]) -> i8 {
-    todo!();
+fn f_help(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
+    let cmds: Vec<&Command> = env
+        .commands
+        .iter()
+        .copied()
+        .filter(|c| env.permissions >= c.permissions)
+        .collect();
+
+    let mut max_usage_size: usize = 0;
+    for cmd in &cmds {
+        if cmd.usage.len() > max_usage_size {
+            max_usage_size = cmd.usage.len();
+        }
+    }
+
+    println!("Available commands:");
+    for cmd in &cmds {
+        println!("{:<max_usage_size$}  {}", cmd.usage, cmd.description);
+    }
+    0
 }
 
 static HELP: Command = Command {
@@ -75,8 +91,13 @@ static HELP: Command = Command {
 };
 
 // ==== WHOAMI ====
-fn f_whoami(argc: u8, argv: &[String]) -> i8 {
-    todo!();
+fn f_whoami(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
+    if env.user == NULLUSER {
+        println!("not logged in");
+    } else {
+        println!("{}", env.user);
+    }
+    0
 }
 
 static WHOAMI: Command = Command {
@@ -88,7 +109,7 @@ static WHOAMI: Command = Command {
 };
 
 // ==== MAKEUSER ====
-fn f_mkuser(argc: u8, argv: &[String]) -> i8 {
+fn f_mkuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
 
@@ -101,7 +122,7 @@ static MKUSER: Command = Command {
 };
 
 // ==== USERS ====
-fn f_users(argc: u8, argv: &[String]) -> i8 {
+fn f_users(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
 
@@ -114,7 +135,7 @@ static USERS: Command = Command {
 };
 
 // ==== CLEAR ====
-fn f_clear(argc: u8, argv: &[String]) -> i8 {
+fn f_clear(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
 
@@ -127,7 +148,7 @@ static CLEAR: Command = Command {
 };
 
 // ==== CHNAME ====
-fn f_chname(argc: u8, argv: &[String]) -> i8 {
+fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO:
     // if perms >= sudo -> allow for changing another name
@@ -143,7 +164,7 @@ static CHNAME: Command = Command {
 };
 
 // ==== CHPASS ====
-fn f_chpass(argc: u8, argv: &[String]) -> i8 {
+fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO:
     // if root -> can change another account
@@ -159,7 +180,7 @@ static CHPASS: Command = Command {
 };
 
 // ==== SWITCHUSER ====
-fn f_switchuser(argc: u8, argv: &[String]) -> i8 {
+fn f_switchuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
 
@@ -172,7 +193,7 @@ static SWITCHUSER: Command = Command {
 };
 
 // ==== LOGOUT ====
-fn f_logout(argc: u8, argv: &[String]) -> i8 {
+fn f_logout(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
 
@@ -185,7 +206,7 @@ static LOGOUT: Command = Command {
 };
 
 // ==== LOGIN ====
-fn f_login(argc: u8, argv: &[String]) -> i8 {
+fn f_login(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO: err if logged in
 }
@@ -199,7 +220,7 @@ static LOGIN: Command = Command {
 };
 
 // ==== RMUSER ====
-fn f_rmuser(argc: u8, argv: &[String]) -> i8 {
+fn f_rmuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO: password confirm
 }
@@ -213,7 +234,7 @@ static RMUSER: Command = Command {
 };
 
 // ==== RESET ====
-fn f_reset(argc: u8, argv: &[String]) -> i8 {
+fn f_reset(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO: password confirm
 }
@@ -226,6 +247,19 @@ static RESET: Command = Command {
     handler: f_reset,
 };
 
+// ==== RESET ====
+fn f_exit(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
+    1
+}
+
+static EXIT: Command = Command {
+    name: "exit",
+    usage: "exit",
+    description: "exit shell",
+    permissions: P_NONE,
+    handler: f_exit,
+};
+
 // ==================== MAINLOOP ====================
 
 /// This is a pseudo-shell to simulate logins and credential management
@@ -236,8 +270,24 @@ fn main() {
         user: NULLUSER.to_string(),
         permissions: P_NONE,
         database: UserCredentials::new(STORAGE_PATH.to_string()),
-        commands: vec![&HELP, &WHOAMI, &MKUSER],
+        commands: vec![
+            &HELP,
+            &WHOAMI,
+            &USERS,
+            &CLEAR,
+            &LOGOUT,
+            &LOGIN,
+            &SWITCHUSER,
+            &CHNAME,
+            &CHPASS,
+            &RMUSER,
+            &MKUSER,
+            &RESET,
+            &EXIT,
+        ],
     };
+
+    // TODO: if no root, prompt for creation
 
     loop {
         let prompt = match env.user.as_str() {
@@ -256,15 +306,19 @@ fn main() {
             continue;
         }
 
+        if argv[0] == "exit" {
+            break;
+        }
+
         if let Some(cmd) = env.commands.iter().copied().find(|c| c.name == argv[0]) {
             if env.permissions < cmd.permissions {
                 eprintln!("permission denied: {}.", cmd.name);
                 continue;
             }
 
-            let ret_code = (cmd.handler)(argc, &argv);
+            let ret_code = (cmd.handler)(&mut env, argc, &argv);
         } else {
-            eprintln!("unknown command: {}. Try 'help'.", argv[0])
+            eprintln!("unknown command: {}. try 'help'.", argv[0])
         }
     }
 }
