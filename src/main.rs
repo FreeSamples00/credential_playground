@@ -20,7 +20,7 @@ const ROOT: &str = "root";
 /// Permission levels
 const P_NONE: u8 = 0;
 const P_USER: u8 = 1;
-const P_SUDO: u8 = 2;
+// const P_SUDO: u8 = 2;
 const P_ROOT: u8 = 3;
 
 // ==================== HELPERS ====================
@@ -42,6 +42,13 @@ fn inline_input(prompt: &str) -> String {
 
 // ==================== STRUCTURES ====================
 
+/// structure to hold information about shell a command
+/// # Fields
+/// * name - name as called from the shell
+/// * usage - for help messsage, command args/flags
+/// * description - for help message, describes functionality
+/// * permissions - permissions level, i.e. who can run command
+/// * handler - function handler that actually does the command
 struct Command {
     name: &'static str,
     usage: &'static str,
@@ -50,6 +57,12 @@ struct Command {
     handler: fn(&mut Environment, u8, &[String]) -> i8,
 }
 
+/// structure for environment variables
+/// Fields
+/// * user - username of active user
+/// * permissions - permissions level of active user
+/// * commands - vector of registered shell commands
+/// * database - struct managing credentials
 struct Environment {
     user: String,
     permissions: u8,
@@ -318,7 +331,7 @@ fn f_switchuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         return 1;
     }
     if argc != 2 {
-        println!("invalid arguments for {}.", argv[0]);
+        println!("invalid arguments for {}", argv[0]);
         return 1;
     }
     if authenticate(
@@ -332,7 +345,7 @@ fn f_switchuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         } else {
             env.permissions = P_USER;
         }
-        println!("logged in as {}.", env.user);
+        println!("logged in as {}", env.user);
         return 0;
     } else {
         println!("failed to authenticate as {}", argv[1]);
@@ -374,7 +387,7 @@ fn f_login(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     }
 
     if argc != 2 {
-        println!("invalid arguments for {}.", argv[0]);
+        println!("invalid arguments for {}", argv[0]);
         return 1;
     }
 
@@ -452,7 +465,7 @@ fn f_reset(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             ROOT,
             &password_input("root password: ", false),
         ) {
-            if inline_input("Are you sure you wish to delete all user information? [Y/n]: ")
+            if inline_input("are you sure you wish to delete all user information? [Y/n]: ")
                 .to_lowercase()
                 == "y"
             {
@@ -461,7 +474,7 @@ fn f_reset(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
                 }
                 env.user = NULLUSER.to_string();
                 env.permissions = P_NONE;
-                println!("all accouns deleted");
+                println!("all accounts deleted");
                 0
             } else {
                 0
@@ -525,7 +538,7 @@ fn main() {
 
     loop {
         if !env.database.contains(ROOT) {
-            println!("no root account found, creating one.");
+            println!("no root account found, creating one");
             env.database.set(
                 &ROOT,
                 &&hash_password(
@@ -559,13 +572,13 @@ fn main() {
 
         if let Some(cmd) = env.commands.iter().copied().find(|c| c.name == argv[0]) {
             if env.permissions < cmd.permissions {
-                println!("permission denied: {}.", cmd.name);
+                println!("permission denied: {}", cmd.name);
                 continue;
             }
 
             let ret_code = (cmd.handler)(&mut env, argc, &argv);
         } else {
-            println!("unknown command: {}. try 'help'.", argv[0])
+            println!("unknown command: {}. try 'help'", argv[0])
         }
     }
 }

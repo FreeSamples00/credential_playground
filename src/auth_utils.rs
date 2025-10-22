@@ -28,10 +28,12 @@ pub const DEF_HASH_COST: usize = 12;
 /// version of hashing algorithm
 const HASH_VERSION: &str = "sha256iter-1";
 
+/// initial h values for sha256 - first 32bits of fractional portion of square roots of first 8 primes
 const SHA_H_INITIAL: [u32; 8] = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 ];
 
+/// initial k values for sha256 - first 32bits of fractional portion of cube roots of first 64 primes
 const SHA_K_INITIAL: [u32; 64] = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -84,10 +86,8 @@ impl UserCredentials {
         let data: File = match File::open(filepath) {
             Ok(file) => file,
             Err(e) => {
-                // eprintln!(
-                //     "\x1b[91mUnable to read '{}', continuing with blank database. Error: {}\x1b[0m",
-                //     filepath, e
-                // );
+                eprintln!("No database found, continuing with no accounts");
+                drop(e);
                 return ret_val;
             }
         };
@@ -110,7 +110,7 @@ impl UserCredentials {
             match record.split_once(":") {
                 Some((username, hashword)) => {
                     if ret_val.contains_key(username) {
-                        println!(
+                        eprintln!(
                             "\x1b[91mDuplicate user '{}' found on line #{} of '{}', skipping record.\x1b[0m",
                             username, counter, filepath
                         );
@@ -119,7 +119,7 @@ impl UserCredentials {
                     }
                 }
                 None => {
-                    println!(
+                    eprintln!(
                         "\x1b[91mInvalid entry in line #{} of '{}'\x1b[0m",
                         counter, filepath
                     );
@@ -139,8 +139,8 @@ impl UserCredentials {
                     write_buf.push_str(&format!("{}:{}\n", record, hash));
                 }
                 None => {
-                    println!(
-                        "\x1b[91mPassword not found for '{}', skipping write.",
+                    eprintln!(
+                        "\x1b[91mPassword not found for '{}', skipping write.\x1b[0m",
                         record
                     );
                     continue;
@@ -152,7 +152,7 @@ impl UserCredentials {
             Ok(()) => {}
             Err(e) => {
                 eprintln!(
-                    "\x1b[91mFailed to write to '{}'. Error: {}",
+                    "\x1b[91mFailed to write to '{}'. Error: {}\x1b[0m",
                     self.storage_location, e
                 );
             }
@@ -257,7 +257,7 @@ fn sha256(mut message: Vec<u8>) -> Vec<u8> {
         let mut i = 0;
         for word in chunk.chunks_exact(4) {
             assert_eq!(word.len(), 4); // ensure chunk size of 4
-            let word: [u8; 4] = word.try_into().unwrap();
+            let word: [u8; 4] = word.try_into().expect("Could not convert slice to array");
             w[i] = u32::from_be_bytes(word);
             i += 1;
         }
@@ -317,6 +317,7 @@ fn sha256(mut message: Vec<u8>) -> Vec<u8> {
     for i in 0..8 {
         digest.append(&mut hs[i].to_be_bytes().to_vec());
     }
+    assert_eq!(digest.len() * 8, 256); // ensure hashed result is 256 bits
     digest
 }
 
@@ -409,14 +410,15 @@ pub fn password_input(prompt: &str, confirm: bool) -> String {
     if confirm {
         loop {
             let inp1: String = prompt_password(prompt).expect("read_password failed");
-            let inp2: String = prompt_password("Confirm password: ").expect("read_password failed");
+            let inp2: String =
+                prompt_password("confirm password: ").expect("reading password failed");
             if inp1 == inp2 {
                 return inp1;
             } else {
-                println!("\nPasswords do not match");
+                println!("\npasswords do not match");
             }
         }
     } else {
-        prompt_password(prompt).expect("read_password failed")
+        prompt_password(prompt).expect("reading password failed")
     }
 }
