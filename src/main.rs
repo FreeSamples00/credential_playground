@@ -207,22 +207,55 @@ static SWITCHUSER: Command = Command {
 // ==== LOGOUT ====
 #[allow(unused_variables)]
 fn f_logout(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
+    if env.user == NULLUSER {
+        println!("not logged in");
+        1
+    } else {
+        println!("logged out of {}", env.user);
+        env.user = NULLUSER.to_string();
+        env.permissions = P_NONE;
+        0
+    }
 }
 
 static LOGOUT: Command = Command {
     name: "logout",
     usage: "logout",
     description: "logout of account",
-    permissions: P_USER,
+    permissions: P_NONE,
     handler: f_logout,
 };
 
 // ==== LOGIN ====
 #[allow(unused_variables)]
 fn f_login(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
-    // TODO: err if logged in
+    if env.user != NULLUSER {
+        println!("already logged in: {}", env.user);
+        return 1;
+    }
+
+    if argc != 2 {
+        println!("invalid arguments for {}.", argv[0]);
+        return 1;
+    }
+
+    if authenticate(
+        &env.database,
+        &argv[1],
+        &password_input("Password: ", false),
+    ) {
+        env.user = argv[1].clone();
+        if env.user == ROOT {
+            env.permissions = P_ROOT;
+        } else {
+            env.permissions = P_USER;
+        }
+        println!("logged in as {}", argv[1]);
+        return 0;
+    } else {
+        println!("failed to authenticate as {}", argv[1]);
+    }
+    1
 }
 
 static LOGIN: Command = Command {
