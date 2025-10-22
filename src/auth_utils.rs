@@ -56,6 +56,7 @@ const SHA_K_INITIAL: [u32; 64] = [
 /// * `set` - creates a user or changes an existing users password
 /// * `get` - retrieves a users hashed password if they exist
 /// * `remove` - deletes a user from the system
+#[derive(Debug)]
 pub struct UserCredentials {
     cred_hashmap: HashMap<String, String>,
     storage_location: String,
