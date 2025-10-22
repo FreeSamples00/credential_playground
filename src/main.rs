@@ -60,6 +60,7 @@ struct Environment {
 // ==================== COMMANDS ====================
 
 // ==== HELP ====
+#[allow(unused_variables)]
 fn f_help(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     let cmds: Vec<&Command> = env
         .commands
@@ -91,6 +92,7 @@ static HELP: Command = Command {
 };
 
 // ==== WHOAMI ====
+#[allow(unused_variables)]
 fn f_whoami(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     if env.user == NULLUSER {
         println!("not logged in");
@@ -109,6 +111,7 @@ static WHOAMI: Command = Command {
 };
 
 // ==== MAKEUSER ====
+#[allow(unused_variables)]
 fn f_mkuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
@@ -122,6 +125,7 @@ static MKUSER: Command = Command {
 };
 
 // ==== USERS ====
+#[allow(unused_variables)]
 fn f_users(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     for username in env.database.list_users() {
         println!("{}", username);
@@ -138,6 +142,7 @@ static USERS: Command = Command {
 };
 
 // ==== CLEAR ====
+#[allow(unused_variables)]
 fn f_clear(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     print!("\x1bc"); // ANSI escape code to clear terminal screen
     0
@@ -152,6 +157,7 @@ static CLEAR: Command = Command {
 };
 
 // ==== CHNAME ====
+#[allow(unused_variables)]
 fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO:
@@ -168,6 +174,7 @@ static CHNAME: Command = Command {
 };
 
 // ==== CHPASS ====
+#[allow(unused_variables)]
 fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO:
@@ -184,6 +191,7 @@ static CHPASS: Command = Command {
 };
 
 // ==== SWITCHUSER ====
+#[allow(unused_variables)]
 fn f_switchuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
@@ -197,6 +205,7 @@ static SWITCHUSER: Command = Command {
 };
 
 // ==== LOGOUT ====
+#[allow(unused_variables)]
 fn f_logout(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
 }
@@ -210,6 +219,7 @@ static LOGOUT: Command = Command {
 };
 
 // ==== LOGIN ====
+#[allow(unused_variables)]
 fn f_login(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO: err if logged in
@@ -224,6 +234,7 @@ static LOGIN: Command = Command {
 };
 
 // ==== RMUSER ====
+#[allow(unused_variables)]
 fn f_rmuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO: password confirm
@@ -238,6 +249,7 @@ static RMUSER: Command = Command {
 };
 
 // ==== RESET ====
+#[allow(unused_variables)]
 fn f_reset(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     todo!();
     // TODO: password confirm
@@ -251,7 +263,8 @@ static RESET: Command = Command {
     handler: f_reset,
 };
 
-// ==== RESET ====
+// ==== EXIT ====
+#[allow(unused_variables)]
 fn f_exit(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     1
 }
@@ -267,6 +280,7 @@ static EXIT: Command = Command {
 // ==================== MAINLOOP ====================
 
 /// This is a pseudo-shell to simulate logins and credential management
+#[allow(unused_variables)]
 fn main() {
     println!("=== UN*X USER MANAGEMENT ===");
 
