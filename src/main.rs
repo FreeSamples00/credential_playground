@@ -443,8 +443,34 @@ static RMUSER: Command = Command {
 // ==== RESET ====
 #[allow(unused_variables)]
 fn f_reset(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
-    // TODO: password confirm
+    if argc != 1 {
+        println!("invalide arguments for {}", argv[0]);
+        1
+    } else {
+        if authenticate(
+            &env.database,
+            ROOT,
+            &password_input("root password: ", false),
+        ) {
+            if inline_input("Are you sure you wish to delete all user information? [Y/n]: ")
+                .to_lowercase()
+                == "y"
+            {
+                for username in env.database.list_users() {
+                    env.database.remove(&username);
+                }
+                env.user = NULLUSER.to_string();
+                env.permissions = P_NONE;
+                println!("all accouns deleted");
+                0
+            } else {
+                0
+            }
+        } else {
+            println!("failed to authenticate as root");
+            1
+        }
+    }
 }
 
 static RESET: Command = Command {
