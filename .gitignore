@@ -1,3 +1,4 @@
 /target
 userdata.csv
 passwd
+**/*.bak
