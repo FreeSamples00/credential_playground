@@ -76,7 +76,7 @@ fn f_help(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         }
     }
 
-    println!("Available commands:");
+    println!("available commands:");
     for cmd in &cmds {
         println!("{:<max_usage_size$}  {}", cmd.usage, cmd.description);
     }
@@ -113,7 +113,26 @@ static WHOAMI: Command = Command {
 // ==== MAKEUSER ====
 #[allow(unused_variables)]
 fn f_mkuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
+    if argc != 2 {
+        println!("invalid arguments for {}", argv[0]);
+        1
+    } else {
+        if env.database.contains(&argv[1]) {
+            println!("account {} already exists", argv[1]);
+            1
+        } else {
+            env.database.set(
+                &argv[1],
+                &hash_password(
+                    &password_input("Password: ", true),
+                    &get_salt(None),
+                    DEF_HASH_COST,
+                ),
+            );
+            println!("created account {}", argv[1]);
+            0
+        }
+    }
 }
 
 static MKUSER: Command = Command {
@@ -193,7 +212,31 @@ static CHPASS: Command = Command {
 // ==== SWITCHUSER ====
 #[allow(unused_variables)]
 fn f_switchuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
+    if env.user == NULLUSER {
+        println!("not logged in");
+        return 1;
+    }
+    if argc != 2 {
+        println!("invalid arguments for {}.", argv[0]);
+        return 1;
+    }
+    if authenticate(
+        &env.database,
+        &argv[1],
+        &password_input("Password: ", false),
+    ) {
+        env.user = argv[1].clone();
+        if env.user == ROOT {
+            env.permissions = P_ROOT;
+        } else {
+            env.permissions = P_USER;
+        }
+        println!("logged in as {}.", env.user);
+        return 0;
+    } else {
+        println!("failed to authenticate as {}", argv[1]);
+    }
+    1
 }
 
 static SWITCHUSER: Command = Command {
@@ -207,22 +250,17 @@ static SWITCHUSER: Command = Command {
 // ==== LOGOUT ====
 #[allow(unused_variables)]
 fn f_logout(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    if env.user == NULLUSER {
-        println!("not logged in");
-        1
-    } else {
-        println!("logged out of {}", env.user);
-        env.user = NULLUSER.to_string();
-        env.permissions = P_NONE;
-        0
-    }
+    println!("logged out of {}", env.user);
+    env.user = NULLUSER.to_string();
+    env.permissions = P_NONE;
+    0
 }
 
 static LOGOUT: Command = Command {
     name: "logout",
     usage: "logout",
     description: "logout of account",
-    permissions: P_NONE,
+    permissions: P_USER,
     handler: f_logout,
 };
 
@@ -269,8 +307,28 @@ static LOGIN: Command = Command {
 // ==== RMUSER ====
 #[allow(unused_variables)]
 fn f_rmuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    todo!();
-    // TODO: password confirm
+    if argc != 2 {
+        println!("invalid arguments for {}", argv[1]);
+        1
+    } else {
+        if authenticate(
+            &env.database,
+            &ROOT,
+            &password_input("root password: ", false),
+        ) {
+            if argv[1] == ROOT {
+                println!("cannot delete root account");
+                1
+            } else {
+                env.database.remove(&argv[1]);
+                println!("deleted account {}", argv[1]);
+                0
+            }
+        } else {
+            println!("failed to authenticate as root");
+            1
+        }
+    }
 }
 
 static RMUSER: Command = Command {
