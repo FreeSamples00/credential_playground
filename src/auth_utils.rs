@@ -202,6 +202,34 @@ impl UserCredentials {
         self.write_disk();
         self
     }
+
+    /// method that authenticates a user
+    /// # Arguments
+    /// * `database` - a `UserCredentials` database storing user credentials
+    /// * `username` - String of users account name
+    /// * `password` - String of user's password (raw)
+    /// # Return
+    /// * whether or not user is authenticated
+    pub fn authenticate(&mut self, username: &str, password: &str) -> bool {
+        if !self.contains(username) {
+            return false;
+        } else {
+            let entry_string = self.get(username).expect("failed to unwrap username");
+            let mut entry_iter = entry_string.split("$");
+            entry_iter.next();
+            entry_iter.next();
+            let cost = entry_iter
+                .next()
+                .expect("Failed to unwrap slice")
+                .parse()
+                .expect("failed to unwrap parse");
+            let salt = entry_iter.next().expect("failed to unwrap salt");
+
+            let hash = hash_password(password, salt, cost);
+
+            return &hash == entry_string;
+        }
+    }
 }
 
 // ==================== FUNCTIONS ====================
@@ -335,7 +363,7 @@ fn sha256(mut message: Vec<u8>) -> Vec<u8> {
 ///     * `D` - the base64 encoded hash of the password
 pub fn hash_password(password: &str, salt: &str, cost: usize) -> String {
     let mut message: Vec<u8> = password.as_bytes().to_vec();
-    message.append(&mut base64_decode(salt).unwrap());
+    message.append(&mut base64_decode(salt).expect("failed to base64 encode"));
 
     let mut hash = sha256(message);
     for _ in 1..(1usize << cost) {
@@ -370,34 +398,6 @@ pub fn get_salt(num_bytes: Option<usize>) -> String {
         }
     }
     return base64_encode(&salt);
-}
-
-/// Function that authenticates a user
-/// # Arguments
-/// * `database` - a `UserCredentials` database storing user credentials
-/// * `username` - String of users account name
-/// * `password` - String of user's password (raw)
-/// # Return
-/// * whether or not user is authenticated
-pub fn authenticate(database: &UserCredentials, username: &str, password: &str) -> bool {
-    if !database.contains(username) {
-        return false;
-    } else {
-        let entry_string = database.get(username).unwrap();
-        let mut entry_iter = entry_string.split("$");
-        entry_iter.next();
-        entry_iter.next();
-        let cost = entry_iter
-            .next()
-            .expect("Failed to unwrap slice")
-            .parse()
-            .expect("failed to unwrap parse");
-        let salt = entry_iter.next().unwrap();
-
-        let hash = hash_password(password, salt, cost);
-
-        return &hash == entry_string;
-    }
 }
 
 /// function that securly gets a password input from the user

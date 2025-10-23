@@ -172,11 +172,10 @@ fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             println!("invalid arguments for {} as root", argv[0]);
             1
         } else {
-            if authenticate(
-                &env.database,
-                ROOT,
-                &password_input("root password: ", false),
-            ) {
+            if env
+                .database
+                .authenticate(ROOT, &password_input("root password: ", false))
+            {
                 let old_name = &argv[1];
                 let new_name = &argv[2];
                 if env.database.contains(new_name) {
@@ -187,7 +186,11 @@ fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
                     println!("account {} not found", old_name);
                     return 1;
                 }
-                let hashword = env.database.get(old_name).unwrap().clone();
+                let hashword = env
+                    .database
+                    .get(old_name)
+                    .expect("failed to retrieve hashed password")
+                    .clone();
                 env.database.remove(old_name);
                 env.database.set(new_name, &hashword);
                 0
@@ -201,11 +204,10 @@ fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             println!("invalid arguments for {}", argv[0]);
             1
         } else {
-            if authenticate(
-                &env.database,
-                &env.user,
-                &password_input("password: ", false),
-            ) {
+            if env
+                .database
+                .authenticate(&env.user, &password_input("password: ", false))
+            {
                 let old_name = &env.user;
                 let new_name = &argv[1];
                 if env.database.contains(new_name) {
@@ -216,7 +218,11 @@ fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
                     println!("account {} not found", old_name);
                     return 1;
                 }
-                let hashword = env.database.get(old_name).unwrap().clone();
+                let hashword = env
+                    .database
+                    .get(old_name)
+                    .expect("failed to reitreive hashed password")
+                    .clone();
                 env.database.remove(old_name);
                 env.database.set(new_name, &hashword);
                 env.user = new_name.clone();
@@ -241,11 +247,10 @@ pub static CHNAME: Command = Command {
 #[allow(unused_variables)]
 fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     if argc == 1 {
-        if authenticate(
-            &env.database,
-            &env.user,
-            &password_input("current password: ", false),
-        ) {
+        if env
+            .database
+            .authenticate(&env.user, &password_input("current password: ", false))
+        {
             env.database.set(
                 &env.user,
                 &hash_password(
@@ -261,11 +266,10 @@ fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             1
         }
     } else if argc == 2 && env.permissions >= P_ROOT {
-        if authenticate(
-            &env.database,
-            ROOT,
-            &password_input("root password: ", false),
-        ) {
+        if env
+            .database
+            .authenticate(ROOT, &password_input("root password: ", false))
+        {
             let target_user = &argv[1];
             if !env.database.contains(&target_user) {
                 println!("account {} not found", target_user);
@@ -310,11 +314,10 @@ fn f_switchuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         println!("invalid arguments for {}", argv[0]);
         return 1;
     }
-    if authenticate(
-        &env.database,
-        &argv[1],
-        &password_input("Password: ", false),
-    ) {
+    if env
+        .database
+        .authenticate(&argv[1], &password_input("Password: ", false))
+    {
         env.user = argv[1].clone();
         if env.user == ROOT {
             env.permissions = P_ROOT;
@@ -367,11 +370,10 @@ fn f_login(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         return 1;
     }
 
-    if authenticate(
-        &env.database,
-        &argv[1],
-        &password_input("Password: ", false),
-    ) {
+    if env
+        .database
+        .authenticate(&argv[1], &password_input("Password: ", false))
+    {
         env.user = argv[1].clone();
         if env.user == ROOT {
             env.permissions = P_ROOT;
@@ -401,11 +403,10 @@ fn f_rmuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         println!("invalid arguments for {}", argv[1]);
         1
     } else {
-        if authenticate(
-            &env.database,
-            &ROOT,
-            &password_input("root password: ", false),
-        ) {
+        if env
+            .database
+            .authenticate(&ROOT, &password_input("root password: ", false))
+        {
             if argv[1] == ROOT {
                 println!("cannot delete root account");
                 1
@@ -437,11 +438,10 @@ fn f_reset(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         1
     } else {
         println!("this action will destroy all accounts.");
-        if authenticate(
-            &env.database,
-            ROOT,
-            &password_input("enter password to proceed: ", false),
-        ) {
+        if env
+            .database
+            .authenticate(ROOT, &password_input("enter password to proceed: ", false))
+        {
             print!("\x1bc"); // ANSI escape code to clear terminal screen
             for username in env.database.list_users() {
                 env.database.remove(&username);
