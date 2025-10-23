@@ -15,6 +15,18 @@ use std::io::{self, Write};
 /// path to file where user data is stored
 const STORAGE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/passwd");
 
+/// prompt icon
+const PROMPT_ICON: &str = "$ ";
+
+/// toggle color mode
+const COLOR_MODE: bool = true;
+
+/// prompt username color
+const USERNAME_COLOR: &str = "92";
+
+/// prompt root username colo
+const USERNAME_ROOT_COLOR: &str = "91";
+
 // ==================== HELPERS ====================
 
 /// function to get inline input from the user
@@ -74,9 +86,19 @@ fn main() {
             println!("root created");
         }
 
-        let prompt = match env.user.as_str() {
-            NULLUSER => "$ ".to_string(),
-            _ => format!("{} $ ", &env.user),
+        let (p_username, p_icon) = match env.user.as_str() {
+            NULLUSER => ("".to_string(), PROMPT_ICON.to_string()),
+            _ => (format!("{} ", env.user), PROMPT_ICON.to_string()),
+        };
+
+        let prompt_color = match env.user.as_str() {
+            ROOT => USERNAME_ROOT_COLOR,
+            _ => USERNAME_COLOR,
+        };
+
+        let prompt = match COLOR_MODE {
+            true => format!("\x1b[{}m{}\x1b[0m{}", prompt_color, p_username, p_icon),
+            false => format!("{}{}", p_username, p_icon),
         };
 
         let argv: Vec<String> = inline_input(&prompt)
