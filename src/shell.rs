@@ -297,7 +297,7 @@ fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
 
 pub static CHPASS: Command = Command {
     name: "chpass",
-    usage: "chpass <username>",
+    usage: "chpass [username]",
     description: "change account password",
     permissions: P_USER,
     handler: f_chpass,
