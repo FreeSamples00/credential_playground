@@ -68,7 +68,7 @@ impl UserCredentials {
     /// create a new credential struct
     /// # Arguments
     /// * `filepath` - filepath of where credentials are stored on disk
-    pub fn new(filepath: String) -> Self {
+    pub fn new(filepath: &str) -> Self {
         UserCredentials {
             cred_hashmap: Self::read_disk(&filepath),
             storage_location: filepath.clone(),
@@ -83,6 +83,7 @@ impl UserCredentials {
     fn read_disk(filepath: &String) -> HashMap<String, String> {
         let mut ret_val: HashMap<String, String> = HashMap::new();
 
+        // read database file
         let data: File = match File::open(filepath) {
             Ok(file) => file,
             Err(e) => {
@@ -95,6 +96,7 @@ impl UserCredentials {
         let reader = BufReader::new(data);
         let mut counter: i32 = 0;
 
+        // parse database
         for record in reader.lines() {
             counter += 1;
             let record = match record {
@@ -133,6 +135,7 @@ impl UserCredentials {
     fn write_disk(&self) {
         let mut write_buf: String = "".to_string();
 
+        // generate database buffer
         for record in self.list_users() {
             match self.cred_hashmap.get(&record) {
                 Some(hash) => {
@@ -148,6 +151,7 @@ impl UserCredentials {
             }
         }
 
+        // write to disk
         match write(&self.storage_location, write_buf) {
             Ok(()) => {}
             Err(e) => {
@@ -214,6 +218,7 @@ impl UserCredentials {
         if !self.contains(username) {
             return false;
         } else {
+            // generate hash to compare
             let entry_string = self.get(username).expect("failed to unwrap username");
             let mut entry_iter = entry_string.split("$");
             entry_iter.next();
@@ -227,6 +232,7 @@ impl UserCredentials {
 
             let hash = hash_password(password, salt, cost);
 
+            // compare
             return &hash == entry_string;
         }
     }

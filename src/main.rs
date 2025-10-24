@@ -46,15 +46,17 @@ pub fn inline_input(prompt: &str) -> String {
 
 // ==================== MAINLOOP ====================
 
-/// This is a pseudo-shell to simulate logins and credential management
+/// This is the REPL to simulate logins and credential management
 #[allow(unused_variables)]
 fn main() {
     println!("\n=== Credential Playground ===");
 
+    // setup environment variables
     let mut env: Environment = Environment {
-        user: NULLUSER.to_string(),
-        permissions: P_NONE,
-        database: UserCredentials::new(STORAGE_PATH.to_string()),
+        user: NULLUSER.to_string(),                   // start out logged out
+        permissions: P_NONE,                          // start out logged oud
+        database: UserCredentials::new(STORAGE_PATH), // load passwd file
+        // reference all commands
         commands: vec![
             &HELP,
             &WHOAMI,
@@ -72,7 +74,9 @@ fn main() {
         ],
     };
 
+    // REPL mainloop
     loop {
+        // create root user if none found
         if !env.database.contains(ROOT) {
             println!("no root account found, creating one");
             env.database.set(
@@ -86,41 +90,50 @@ fn main() {
             println!("root created");
         }
 
+        // generate prompt string
         let (p_username, p_icon) = match env.user.as_str() {
             NULLUSER => ("".to_string(), PROMPT_ICON.to_string()),
             _ => (format!("{} ", env.user), PROMPT_ICON.to_string()),
         };
 
+        // determine color
         let prompt_color = match env.user.as_str() {
             ROOT => USERNAME_ROOT_COLOR,
             _ => USERNAME_COLOR,
         };
 
+        // possibly apply color
         let prompt = match COLOR_MODE {
             true => format!("\x1b[{}m{}\x1b[0m{}", prompt_color, p_username, p_icon),
             false => format!("{}{}", p_username, p_icon),
         };
 
+        // take commandline input and create argv list
         let argv: Vec<String> = inline_input(&prompt)
             .split_whitespace()
             .map(|s| s.to_string())
             .collect();
         let argc: u8 = argv.len() as u8;
 
+        // create argc count
         if argc == 0 {
             continue;
         }
 
+        // harcoded exit command
         if argv[0] == "exit" {
             break;
         }
 
+        // search commandlist
         if let Some(cmd) = env.commands.iter().copied().find(|c| c.name == argv[0]) {
+            // check permissions for command
             if env.permissions < cmd.permissions {
                 println!("permission denied: {}", cmd.name);
                 continue;
             }
 
+            // run command w/ args
             let ret_code = (cmd.handler)(&mut env, argc, &argv);
         } else {
             println!("unknown command: {}. try 'help'", argv[0])

@@ -51,6 +51,7 @@ pub struct Environment {
 // ==== HELP ====
 #[allow(unused_variables)]
 fn f_help(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
+    // get commands as vec
     let cmds: Vec<&Command> = env
         .commands
         .iter()
@@ -58,6 +59,7 @@ fn f_help(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         .filter(|c| env.permissions >= c.permissions)
         .collect();
 
+    // filter commands by permissions
     let mut max_usage_size: usize = 0;
     for cmd in &cmds {
         if cmd.usage.len() > max_usage_size {
@@ -65,6 +67,7 @@ fn f_help(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         }
     }
 
+    // print commands
     println!("available commands:");
     for cmd in &cmds {
         println!("{:<max_usage_size$}  {}", cmd.usage, cmd.description);
@@ -106,10 +109,12 @@ fn f_mkuser(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
         println!("invalid arguments for {}", argv[0]);
         1
     } else {
+        // prevent collisions
         if env.database.contains(&argv[1]) {
             println!("account {} already exists", argv[1]);
             1
         } else {
+            // create user
             env.database.set(
                 &argv[1],
                 &hash_password(
@@ -168,6 +173,7 @@ pub static CLEAR: Command = Command {
 #[allow(unused_variables)]
 fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     if env.permissions >= P_ROOT {
+        // root path: change another account name
         if argc != 3 {
             println!("invalid arguments for {} as root", argv[0]);
             1
@@ -178,19 +184,23 @@ fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             {
                 let old_name = &argv[1];
                 let new_name = &argv[2];
+                // ensure account
                 if env.database.contains(new_name) {
                     println!("account {} already exists", new_name);
                     return 1;
                 }
+                // prevent collisions
                 if !env.database.contains(old_name) {
                     println!("account {} not found", old_name);
                     return 1;
                 }
+                // fetch credential string
                 let hashword = env
                     .database
                     .get(old_name)
                     .expect("failed to retrieve hashed password")
                     .clone();
+                // change account
                 env.database.remove(old_name);
                 env.database.set(new_name, &hashword);
                 0
@@ -200,6 +210,7 @@ fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             }
         }
     } else {
+        // user path: change own account name
         if argc != 2 {
             println!("invalid arguments for {}", argv[0]);
             1
@@ -210,14 +221,12 @@ fn f_chname(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             {
                 let old_name = &env.user;
                 let new_name = &argv[1];
+                // prevent collisions
                 if env.database.contains(new_name) {
                     println!("account {} already exists", new_name);
                     return 1;
                 }
-                if !env.database.contains(old_name) {
-                    println!("account {} not found", old_name);
-                    return 1;
-                }
+                // change account name
                 let hashword = env
                     .database
                     .get(old_name)
@@ -247,10 +256,12 @@ pub static CHNAME: Command = Command {
 #[allow(unused_variables)]
 fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
     if argc == 1 {
+        // change own password
         if env
             .database
             .authenticate(&env.user, &password_input("current password: ", false))
         {
+            // change to new password
             env.database.set(
                 &env.user,
                 &hash_password(
@@ -266,15 +277,18 @@ fn f_chpass(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
             1
         }
     } else if argc == 2 && env.permissions >= P_ROOT {
+        // root path: change other account password
         if env
             .database
             .authenticate(ROOT, &password_input("root password: ", false))
         {
+            // ensure account exists
             let target_user = &argv[1];
             if !env.database.contains(&target_user) {
                 println!("account {} not found", target_user);
                 return 1;
             }
+            // change password
             env.database.set(
                 target_user,
                 &hash_password(
@@ -468,7 +482,7 @@ pub static RESET: Command = Command {
 // ==== EXIT ====
 #[allow(unused_variables)]
 fn f_exit(env: &mut Environment, argc: u8, argv: &[String]) -> i8 {
-    1
+    1 // blank function for exit entry
 }
 
 pub static EXIT: Command = Command {
