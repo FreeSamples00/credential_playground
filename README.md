@@ -50,3 +50,13 @@ pub struct Command {
     pub handler: fn(&mut Environment, u8, &[String]) -> i8, // reference to handler function
 }
 ```
+
+The shell REPL is implemented in `main.rs`, using the shell library
+
+## Auth Library
+
+The authentication library provides a database structure with methods for getting and setting entries, as well as writing to and reading from disk. In addition to the database operations, the structure provides an authentication method to compare raw password input against credential entries.
+
+The authentication library also provides functions for password salt generation (using OS random values), and sha-256 hashing. The sha-256 hash is a custom implementation, as mentioned previously it functions correctly but should not be trusted to be secure for real applications.
+
+Lastly the authentication library provides a function to take secure password input from the terminal. Input is hidden, and when terminal emulators allow secure input is enabled.
