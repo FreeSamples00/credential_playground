@@ -59,4 +59,4 @@ The authentication library provides a database structure with methods for gettin
 
 The authentication library also provides functions for password salt generation (using OS random values), and sha-256 hashing. The sha-256 hash is a custom implementation, as mentioned previously it functions correctly but should not be trusted to be secure for real applications.
 
-Lastly the authentication library provides a function to take secure password input from the terminal. Input is hidden, and when terminal emulators allow secure input is enabled.
+Lastly the authentication library provides a function to take secure password input from the terminal. Input is hidden, and when terminal emulators allow, secure input is enabled.
