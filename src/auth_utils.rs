@@ -70,8 +70,8 @@ impl UserCredentials {
     /// * `filepath` - filepath of where credentials are stored on disk
     pub fn new(filepath: &str) -> Self {
         UserCredentials {
-            cred_hashmap: Self::read_disk(&filepath),
-            storage_location: filepath.clone(),
+            cred_hashmap: Self::read_disk(filepath),
+            storage_location: filepath.to_string().clone(),
         }
     }
 
@@ -80,7 +80,7 @@ impl UserCredentials {
     /// * `filepath` - path to file
     /// # Return
     /// * hashmap - populated with user credentials, empty if file unable to be read
-    fn read_disk(filepath: &String) -> HashMap<String, String> {
+    fn read_disk(filepath: &str) -> HashMap<String, String> {
         let mut ret_val: HashMap<String, String> = HashMap::new();
 
         // read database file
